@@ -1,0 +1,1146 @@
+---
+title: "Degrowth critique"
+author: "Ivan Savin"
+date: "25/04/2023"
+output: word_document
+
+---
+
+<style type="text/css">
+body, td {
+   font-size: 20px;
+}
+code.r{ / Code block /
+    font-size: 6px;
+}
+</style>
+
+```{r echo=FALSE}
+rm(list=ls())
+setwd("E:/Projects/2_Working Papers/Degrowth critique/Depository")
+#install.packages(c("magrittr", "data.table", 'dplyr', 'ggplot2', 'cluster'))
+sapply(c("magrittr", "data.table", 'plyr','dplyr', 'ggplot2', 'cluster','knitr', 'dendextend','pkgbuild','devtools','R.methodsS3','stm','ngram','matrixStats','corrplot','ggpubr','wordcloud','readxl','tm','igraph'), require, character.only = T)
+# library(doParallel) 
+# cl <- makeCluster(6, type='PSOCK')
+# registerDoParallel(cl)
+
+knitr::opts_chunk$set(fig.width=10, fig.height=10,dpi=300) #10 15
+
+#data<-read_xlsx("startups_full_lang_NEW.xlsm")
+#data<-read.csv('EIST_ Abstract & Keyword for published papers_v4.csv', header=T, sep=',')
+data <- fread('data_degrowth_sept2023.csv') 
+data<-data[1:594,]
+data$`Empirical.Model`<-as.numeric(data$`Empirical.Model`)
+
+data<-data[-which(data$include==0 | is.na(data$include)),]
+names(data)[61]<-"Pub.Type"
+names(data)[23]<-"citations"
+data<-as.data.frame(data)
+for (i in c(8:14,20)){
+  data[,i]<-as.numeric(data[,i])
+}
+data$citations[which(is.na(data$citations))]<-0
+data$Abstract[which(data$Abstract=="[No abstract available]")]<-NA
+
+summary(data)
+#head(data)
+table(data$Pub.Type)
+table(data$Year)
+plot(table(data$Pub.Type),ylab="Frequency")
+
+
+degrowth_count<-matrix(0,2,17)
+thmodel_count<-matrix(0,2,17)
+empmodel_count<-matrix(0,2,17)
+qualdata_count<-matrix(0,2,17)
+quantdata_count<-matrix(0,2,17)
+j<-1
+for (i in (2007:2023)){
+  degrowth_count[1,j]<-i-.5
+  degrowth_count[2,j]<-sum(data$degrowth[which(data$Year==i)])
+  empmodel_count[1,j]<-i-.5
+empmodel_count[2,j]<-sum(data$`Empirical.Model`[which(data$Year==i)])/sum(data$Year==i)*100
+   thmodel_count[1,j]<-i-.5
+thmodel_count[2,j]<-sum(data$`Theoretical.Model`[which(data$Year==i)])/sum(data$Year==i)*100
+    qualdata_count[1,j]<-i-.5
+qualdata_count[2,j]<-sum(data$`Qualitative.Data`[which(data$Year==i)])/sum(data$Year==i)*100
+    quantdata_count[1,j]<-i-.5
+quantdata_count[2,j]<-sum(data$`Quantitative.Data`[which(data$Year==i)])/sum(data$Year==i)*100
+  j<-j+1
+}
+
+par(mfrow = c(2, 1), mar = c(5, 4, 1, 1) + 0.3)              # Additional space for second y-axis
+
+# l <- list(data$Year,data$Year[data$degrowth==1])
+# multhist(l, col=c('grey','red'),breaks=c(2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023), main="",ylab="Number of studies", xaxt="n", xlab="")
+# axis(1, labels=c(2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023),las=2)
+# legend("topleft", legend=c("All studies","Studies with 'degrowth' in title"),
+#        col=c("grey","red"), lty=1, cex=0.6, horiz=TRUE)
+
+
+hist(data$Year, breaks=c(2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023), main="",ylab="Number of studies", xaxt="n", xlab="")
+axis(1, at=c(2006.5,2007.5,2008.5,2009.5,2010.5,2011.5,2012.5,2013.5,2014.5,2015.5,2016.5,2017.5,2018.5,2019.5,2020.5,2021.5,2022.5), labels=c(2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023),las=2)
+
+lines(x = degrowth_count[1,],y=degrowth_count[2,], col = "red")
+
+legend("topleft", legend=c("Studies with 'degrowth' in title"),
+       col=c("red"), lty=1, cex=0.8, horiz=TRUE)
+
+plot(x = empmodel_count[1,],y=empmodel_count[2,], col = "blue",pch=0, xaxt="n", xlab="", ylab = "Percent",ylim=c(0,50))
+lines(x = empmodel_count[1,],y=empmodel_count[2,], col = "blue")
+axis(1, at=c(2006.5,2007.5,2008.5,2009.5,2010.5,2011.5,2012.5,2013.5,2014.5,2015.5,2016.5,2017.5,2018.5,2019.5,2020.5,2021.5,2022.5), labels=c(2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023),las=2) 
+par(new = TRUE)
+
+plot(x = empmodel_count[1,],y=thmodel_count[2,], col = "cyan",pch=0, xaxt="n", xlab="", ylab = "Percent",ylim=c(0,50))
+lines(x = empmodel_count[1,],y=empmodel_count[2,], col = "cyan")
+axis(1, at=c(2006.5,2007.5,2008.5,2009.5,2010.5,2011.5,2012.5,2013.5,2014.5,2015.5,2016.5,2017.5,2018.5,2019.5,2020.5,2021.5,2022.5), labels=c(2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023),las=2) 
+par(new = TRUE) 
+
+plot(x = empmodel_count[1,],y=qualdata_count[2,], col = "orange",pch=1, axes = FALSE, xlab = "", ylab = "",ylim=c(0,50))
+lines(x = qualdata_count[1,],y=qualdata_count[2,], col = "orange")
+par(new = TRUE) 
+plot(x = empmodel_count[1,],y=quantdata_count[2,], col = "magenta",pch=2, axes = FALSE, xlab = "", ylab = "",ylim=c(0,50))
+lines(x = empmodel_count[1,],y=quantdata_count[2,], col = "magenta")
+par(new = TRUE) 
+legend("topleft", legend=c("Empirical \n model", "Theoretical \n model","Quantitative \n data","Qualitative \n data"),
+       col=c("blue","cyan","magenta","orange"), lty=1, pch=0:2,cex=0.8, horiz=TRUE)
+
+sort(table(data$`Source.title`), desreasing=TRUE)
+
+# 
+# sum(is.na(data$Abstract)) #number of papers with no abstract
+# table(data$Pub.Type[which(is.na(data$Abstract))]) #most conference papers and editorials do not have an abstract
+
+
+#lets exclude editorials, conference papers, reviews , erratum/retracted, and letters/notes from further analysis (also because they have many missing abstracts)
+#data_clean<-data[-which(data$Pub.Type %in% c("Editorial","Conference paper", "Review", "Erratum", "Retracted","Letter","Note")),]
+# data_clean<-data[-which(data$Dochead %in% c("Book review","Editorial","Analysis","Comments & Views","News","Policy brief","Survey","Viewpoint")),]
+#lets delete papers without abstracts available
+#data_clean<-data[-which(is.na(data$Abstract)),]
+#data_clean<-data[-which(is.na(data$Accepted.DateM)),]
+data_clean<-data
+
+data_clean$TitleAbstract<-paste(data_clean$Title,data_clean$Abstract,data_clean$`Indexed Keywords`,data_clean$`Author Keywords`)
+#Average length of response on economic growth is 1.94 words
+data_clean$length_txt<-matrix(0,length(data_clean$TitleAbstract),1)
+
+data_clean$length_txt<-sapply(1:length(data_clean$Abstract), function(x) wordcount(data_clean$TitleAbstract[x]))
+par(mfrow = c(1, 1))
+hist(data_clean$length_txt,breaks=100, main="Length of abstracts ",xlab="# of words")
+summary(data_clean$length_txt)
+
+
+data_clean$length_title<-matrix(0,length(data_clean$TitleAbstract),1)
+data_clean$length_title<-sapply(1:length(data_clean$Title), function(x) wordcount(data_clean$Title[x]))
+
+data_clean$citationspy<-matrix(0,length(data_clean$TitleAbstract),1)
+data_clean$yearssincepub<-matrix(0,length(data_clean$TitleAbstract),1)
+data_clean$yearssincepub<-sapply(1:length(data_clean$Year), function(x) max(1,2023-data_clean$Year[x]))
+data_clean$citationspy<-data$citations/data_clean$yearssincepub
+  
+par(mfrow = c(1, 3))
+hist(data_clean$length_title,breaks=100, main="Length of title ",xlab="# of words")
+summary(data_clean$length_title)
+#data_clean$citedby_count[which(is.na(data_lemmatized$citations))]<-0
+hist(data_clean$citations,breaks=100, main="Number of citations",xlab="")
+summary(data_clean$citations)
+hist(data_clean$citationspy,breaks=100, main="Number of citations",xlab="")
+summary(data_clean$citationspy)
+# data_clean$TitleAbstract <- gsub("[[:punct:]]", " ", data_clean$TitleAbstract)  # replace punctuation with space
+# 
+# library("writexl")
+# con<-file('data_language',encoding="UTF-8")
+# write_xlsx(data_clean,"data_clean2.xlsx")
+# write.csv(data_clean,"data_clean3.csv",fileEncoding = "ISO-8859-1")
+#write.table(data_clean,file="data_clean4.csv",sep=",",dec = " ",fileEncoding = "ISO-8859-1")
+
+
+par(mfrow = c(1, 2))
+hist(data_clean$Year,breaks=53, main="",xlab="year of publication")
+hist(data_clean$length_txt,breaks=100, main="",xlab="# of words")
+summary(data_clean$length_txt)
+
+
+
+
+
+cor.test(data_clean$citationspy,data_clean$length_title)
+plot(data_clean$length_title,data_clean$citations,xlab="Length of title",ylab="# of citations per year")
+# 
+
+mean(data_clean$citationspy[which(data$`Source.title`=="Ecological Economics")])
+mean(data_clean$citationspy[which(data$`Source.title`=="Journal of Cleaner Production")])
+mean(data_clean$citationspy[which(data$`Source.title`=="Futures")])
+mean(data_clean$citationspy[which(data$`Source.title`=="Journal of Political Ecology")])
+mean(data_clean$citationspy[which(data$`Source.title`=="Sustainability (Switzerland)")])
+mean(data_clean$citationspy[which(data$`Source.title`=="Sustainability Science")])
+mean(data_clean$citationspy[which(data$`Source.title`=="Environmental Values")])
+mean(data_clean$citationspy[which(data$`Source.title`=="Capitalism, Nature, Socialism")])
+mean(data_clean$citationspy[which(data$`Source.title`=="Local Environment")])
+mean(data_clean$citationspy[which(data$`Source.title`=="Journal of Sustainable Tourism")])
+
+mean(data_clean$`Theoretical.Model`[which(data$`Source.title`=="Ecological Economics")])
+mean(data_clean$`Theoretical.Model`[which(data$`Source.title`=="Journal of Cleaner Production")])
+mean(data_clean$`Theoretical.Model`[which(data$`Source.title`=="Futures")])
+mean(data_clean$`Theoretical.Model`[which(data$`Source.title`=="Journal of Political Ecology")])
+mean(data_clean$`Theoretical.Model`[which(data$`Source.title`=="Sustainability (Switzerland)")])
+mean(data_clean$`Theoretical.Model`[which(data$`Source.title`=="Sustainability Science")])
+mean(data_clean$`Theoretical.Model`[which(data$`Source.title`=="Environmental Values")])
+mean(data_clean$`Theoretical.Model`[which(data$`Source.title`=="Capitalism, Nature, Socialism")])
+mean(data_clean$`Theoretical.Model`[which(data$`Source.title`=="Local Environment")])
+mean(data_clean$`Theoretical.Model`[which(data$`Source.title`=="Journal of Sustainable Tourism")])
+
+mean(data_clean$`Empirical.Model`[which(data$`Source.title`=="Ecological Economics")])
+mean(data_clean$`Empirical.Model`[which(data$`Source.title`=="Journal of Cleaner Production")])
+mean(data_clean$`Empirical.Model`[which(data$`Source.title`=="Futures")])
+mean(data_clean$`Empirical.Model`[which(data$`Source.title`=="Journal of Political Ecology")])
+mean(data_clean$`Empirical.Model`[which(data$`Source.title`=="Sustainability (Switzerland)")])
+mean(data_clean$`Empirical.Model`[which(data$`Source.title`=="Sustainability Science")])
+mean(data_clean$`Empirical.Model`[which(data$`Source.title`=="Environmental Values")])
+mean(data_clean$`Empirical.Model`[which(data$`Source.title`=="Capitalism, Nature, Socialism")])
+mean(data_clean$`Empirical.Model`[which(data$`Source.title`=="Local Environment")])
+mean(data_clean$`Empirical.Model`[which(data$`Source.title`=="Journal of Sustainable Tourism")])
+
+
+mean(data_clean$`Qualitative.Data`[which(data$`Source.title`=="Ecological Economics")])
+mean(data_clean$`Qualitative.Data`[which(data$`Source.title`=="Journal of Cleaner Production")])
+mean(data_clean$`Qualitative.Data`[which(data$`Source.title`=="Futures")])
+mean(data_clean$`Qualitative.Data`[which(data$`Source.title`=="Journal of Political Ecology")])
+mean(data_clean$`Qualitative.Data`[which(data$`Source.title`=="Sustainability (Switzerland)")])
+mean(data_clean$`Qualitative.Data`[which(data$`Source.title`=="Sustainability Science")])
+mean(data_clean$`Qualitative.Data`[which(data$`Source.title`=="Environmental Values")])
+mean(data_clean$`Qualitative.Data`[which(data$`Source.title`=="Capitalism, Nature, Socialism")])
+mean(data_clean$`Qualitative.Data`[which(data$`Source.title`=="Local Environment")])
+mean(data_clean$`Qualitative.Data`[which(data$`Source.title`=="Journal of Sustainable Tourism")])
+
+mean(data_clean$`Quantitative.Data`[which(data$`Source.title`=="Ecological Economics")])
+mean(data_clean$`Quantitative.Data`[which(data$`Source.title`=="Journal of Cleaner Production")])
+mean(data_clean$`Quantitative.Data`[which(data$`Source.title`=="Futures")])
+mean(data_clean$`Quantitative.Data`[which(data$`Source.title`=="Journal of Political Ecology")])
+mean(data_clean$`Quantitative.Data`[which(data$`Source.title`=="Sustainability (Switzerland)")])
+mean(data_clean$`Quantitative.Data`[which(data$`Source.title`=="Sustainability Science")])
+mean(data_clean$`Quantitative.Data`[which(data$`Source.title`=="Environmental Values")])
+mean(data_clean$`Quantitative.Data`[which(data$`Source.title`=="Capitalism, Nature, Socialism")])
+mean(data_clean$`Quantitative.Data`[which(data$`Source.title`=="Local Environment")])
+mean(data_clean$`Quantitative.Data`[which(data$`Source.title`=="Journal of Sustainable Tourism")])
+
+
+
+library(corrplot)
+
+TopicCorrMatrix<-data_clean[,c(10:14,68,69)]
+
+
+TopicCorrMatrix1<-cor(TopicCorrMatrix)
+TopicCorrMatrix1<-TopicCorrMatrix1-diag(7)
+colnames(TopicCorrMatrix1)<-c("year of publication","qualitative data","quantitative data","theoretical model","empirical model","length of title","citations per year")
+rownames(TopicCorrMatrix1)<-colnames(TopicCorrMatrix1)
+#corrplot(TopicCorrMatrix1, is.corr = FALSE, order="hclust", method = "square",tl.cex=.7,tl.col = "black",cl.lim = c(-1, 1),col=colorRampPalette(c("blue","white","red"))(200))
+# corrplot(TopicCorrMatrix1, is.corr = FALSE, order="hclust", method = "square",tl.cex=.7,tl.col = "black",cl.lim = c(-1, 1),col=colorRampPalette(c("blue","white","red"))(200))
+
+testRes = cor.mtest(TopicCorrMatrix, conf.level = 0.95)
+corrplot(TopicCorrMatrix1, p.mat = testRes$p, method = 'circle', insig='blank',col.lim = c(-1, 1),tl.cex=.9,tl.col="black",
+          diag = FALSE,col=colorRampPalette(c("blue","white","red"))(200))$corrPos -> p1
+p1<-p1[which(p1$p.value<0.05),]
+text(p1$x, p1$y, round(p1$corr, 2),cex=.7)
+#table(data_clean$Country)
+# hist(data_clean$X..StockPgs,breaks=50, main="Length of papers",xlab="# of pages")
+# summary(data_clean$X..StockPgs)
+
+data_lemmatized <- read.csv('data_degrowth_Sept2023_lemmatized.csv', header=T, sep=',',encoding = "UTF-8")
+data_lemmatized$citationspy<-data_clean$citationspy
+data_lemmatized$citations<-data_clean$citations
+
+papers_qualdata<-data_clean[which(data_clean$`Qualitative.Data`==1),c(1,7,3,4,12,13,14,15,17,18)]
+write.csv(papers_qualdata,'papers_qualdata.csv', col.names=T)
+papers_quandata<-data_clean[which(data_clean$`Quantitative.Data`==1),c(1,7,3,4,12,13,14,15,17,18)]
+write.csv(papers_quandata,'papers_quandata.csv', col.names=T)
+
+papers_theormodel<-data_clean[which(data_clean$`Theoretical.Model`==1),c(1,7,3,4,12,13,14,15,17,18)]
+write.csv(papers_theormodel,'papers_theormodel.csv', col.names=T)
+papers_empmodel<-data_clean[which(data_clean$`Empirical.Model` ==1) ,c(1,7,3,4,12,13,14,15,17,18)]
+write.csv(papers_empmodel,'papers_empmodel.csv', col.names=T)
+
+
+```
+
+
+
+
+
+Prepare lemmatized and cleaned data 
+dropping stopwords and rare words (appearing in less than 3 documents). The latter is typical for STM (Tvinnereim  used a threshold of 3 but had much less doscuments than we do) as rare words do not contribute much to clusters of words (topics). 
+
+As a result, we get the following message from the algorithm on data cleaning:
+
+emoving 5906 of 8443 terms (8440 of 56778 tokens) due to frequency 
+Your corpus now has 561 documents, 2537 terms and 48338 tokens.
+
+& test STM models for number of topics 3:50 
+As covariates I use year of publication and number of citations
+```{r, echo=FALSE}
+justloaddata<-1
+
+if(justloaddata==0){
+
+library(stm)
+processed <- textProcessor(data_lemmatized$text_clean,
+                           metadata = data_lemmatized, lowercase = FALSE,
+                           removestopwords = FALSE, removenumbers = FALSE,
+                           removepunctuation = FALSE, stem = FALSE,
+                           wordLengths = c(3, Inf), sparselevel = 1, 
+                           customstopwords = c("inc"),
+                           language = "en",
+                           verbose = TRUE)
+# Building corpus... 
+# Converting to Lower Case... 
+# Removing punctuation... 
+# Removing stopwords... 
+# Remove Custom Stopwords...
+# Removing numbers... 
+# Creating Output... 
+out <- prepDocuments(processed$documents, processed$vocab, meta=processed$meta, lower.thresh=3,verbose = TRUE)
+# Removing 255315 of 272232 terms (364310 of 7437481 tokens) due to frequency 
+# Removing 11 Documents with No Words 
+# Your corpus now has 250226 documents, 16917 terms and 7073171 tokens.>
+
+vocab_app<-out$vocab
+junk<-out$wordcounts[out$wordcounts>3]
+freq_vocab<-out$wordcounts[out$wordcounts>3]
+#table(unlist(out$documents))
+vocab_app<-vocab_app[order(freq_vocab,decreasing = TRUE)]
+pop_words<-cbind(vocab_app,freq_vocab[order(freq_vocab,decreasing = TRUE)])
+print(length(out$vocab))
+#4906
+
+  storage<-searchK(out$documents, out$vocab, K = c(3:50),
+                   prevalence =~Year + citationspy + Theoretical.Model + Empirical.Model + Qualitative.Data + Quantitative.Data,
+                   data = out$meta,heldout.seed =59292,init.type="Spectral",
+                   N = floor(0.2 *length(out$documents)),
+                   M=10,#number of keywords per topic to calculate exclusivity`  
+                   #max.em.its=1000 #max number of iterations per model
+  )
+  save(list = ls(all = TRUE), file = "calibration_degrowth_50sept23.RData")
+}
+load("calibration_degrowth_50sept23.RData")
+
+#100 most popular words in the whole text
+print(pop_words[1:100,])
+write.csv(pop_words,"pop_word.csv",fileEncoding = "ISO-8859-1")
+
+demoFreq<-as.data.frame(pop_words)
+library(wordcloud2)
+colnames(demoFreq)<-c("word","freq")
+demoFreq$freq<-as.numeric(demoFreq$freq)
+# png('cloud.png',width = 15, height = 8, units = 'in', res = 1000)
+# letterCloud(demoFreq, word = "EIST", color="white", backgroundColor="pink")
+# dev.off()
+
+#png('cloud.png',width = 15, height = 8, units = 'in', res = 1000)
+#wordcloud2(demoFreq)
+#dev.off()
+Kchoice<-11
+
+par(mfrow = c(1, 3) ,mar=c(4,4,1,2)) 
+plot(storage$results$K[1:48], storage$results$heldout[1:48], ylab="Heldout log-likelihood",xlab="",xaxt="n",col=ifelse(storage$results$K %in% Kchoice, 'red', 'blue'))
+axis(1, at=3:(length(storage$results$K)+2), labels=storage$results$K)
+plot(storage$results$K[1:48],storage$results$exclus[1:48],  ylab="Exclusivity",xlab="Number of Topics",xaxt="n",col=ifelse(storage$results$K %in% Kchoice, 'red', 'blue'))
+axis(1, at=3:(length(storage$results$K)+2), labels=storage$results$K)
+plot(storage$results$K[1:48],storage$results$semcoh[1:48], ylab="Semantic coherence",xlab="",xaxt="n",col=ifelse(storage$results$K %in% Kchoice, 'red', 'blue'))
+axis(1, at=3:(length(storage$results$K)+2), labels=storage$results$K)
+
+```
+
+
+Here we observe:
+
+ - the figure with topic proportions, i.e. how much text explained by each of the topics;  
+ - the figure with topic summary printing 20 most frequent and exclusive words for each topic;  
+ - summary of each topic with words having  highest probability (most frequent), frequency and exclusivity (FREX), LIFT and SCORE you can ignore as those are rather internal measures without intuitive interpretation;  
+  - 5 representative responses for each topic ("representative" responses are sometimes very heterogeneous, but one should remember  that as we have many topics, most of responses consist of 2-3 topics (even the most representative ones!) so it is important to look on the exclusive words and wordclouds to get a better picture.)
+  
+  We chose 38topics
+```{r, echo=FALSE}
+justloaddata<-1
+
+if(justloaddata==0){
+
+  ncpSelect2 <- selectModel(out$documents, 
+                            out$vocab, 
+                            K = Kchoice,
+                            prevalence =~Year + citationspy + Theoretical.Model + Empirical.Model + Qualitative.Data + Quantitative.Data,
+                            data = out$meta,
+                            runs=2,
+                            seed =1,
+                            init.type="Spectral",
+                            verbose=TRUE) #, emtol=1) Defaults to .001%.
+  save(list = ls(all = TRUE), file = "degrowth_11sept23.RData")
+}
+load("degrowth_11sept23.RData")
+# Check the four selected models
+# par(mfrow = c(1, 1) ,mar=c(4,4,1,2)) 
+# plotModels(ncpSelect2,xlab="Semantic Coherence")
+# mean(unlist(ncpSelect2$semcoh))
+# mean(unlist(ncpSelect2$exclusivity))
+#semantic coherence for  2      3       4     5 topics
+#                     -151.0 -171.4  -192  -197
+#exclusivity for         2      3       4     5 topics
+#                      8.17   8.80     9.05  9.32
+# Choose run #1 based on qualitative assessment: 
+
+
+#put topic labels here
+tiopiclabel<-as.character(matrix(0,Kchoice,1))
+tiopiclabel[9]<-"T1: Environmental justice" #"Undesirable versus desirable societies" "CRITICAL LONG-TERM PLANNING; DESIRABLE SOCIETIES; TECHNOLOGICAL FORECASTING"  
+tiopiclabel[5]<-"T2: Sustainable wellbeing" #media, interaction, behaviour, online shopping
+tiopiclabel[2]<-"T3: Local/urban practices" #decision making
+tiopiclabel[6]<-"T4: Democracy and civil society"# and roadmapping
+tiopiclabel[3]<-"T5: Circular economy" # public policy, science, technology and innovation
+tiopiclabel[8]<-"T6: Green transition"
+tiopiclabel[11]<-"T7: Conceptual framework" # in value creation
+tiopiclabel[4]<-"T8: Limits and scarcity" #ABM, numerical stochastic, bayesian
+tiopiclabel[1]<-"T9: Sustainable tourism" #analysing 
+tiopiclabel[10]<-"T10: Historical lessons" #analysing 
+tiopiclabel[7]<-"T11: Scenarios for emission neutrality" #analysing 
+
+
+Korder<-c(9,5,2,6,3,8,11,4,1,10,7)#c(8,5,17,22,3,7,16,14,24,10,2,11,12,23,13,20,4,21,9,1,18,19,15,6,25)
+
+
+
+ncpPrevFit_startup <- ncpSelect2$runout[[1]]
+#exclusivity(ncpPrevFit_ecogrowth, M = 10, frexw = 0.7)
+# Save workspace after model runs
+#save(list = ls(all = TRUE), file = "preparedModels-EcoGrowth-stm-pub4.RData")
+#make.dt(ncpPrevFit_climpolicy)
+plot(ncpPrevFit_startup, type="summary", main="",custom.labels=tiopiclabel)
+
+junk<-colSums(ncpPrevFit_startup$theta)/sum(ncpPrevFit_startup$theta)
+junk[Korder]
+par(mfrow = c(1, 1), cex=1.5)
+plot(ncpPrevFit_startup, type="labels", labeltype="frex",text.cex = .4,n=10)
+
+
+# par(mfrow = c(1, 1) ,mar=c(0,0,0,0)) 
+# plot(ncpPrevFit_startup, type="hist")
+
+dd<-ncpPrevFit_startup$vocab
+vocab_app<-out$vocab
+junk<-out$wordcounts[out$wordcounts>3]
+freq_vocab<-out$wordcounts[out$wordcounts>3]#table(unlist(out$documents))
+vocab_app<-vocab_app[order(freq_vocab,decreasing = TRUE)]
+
+logbeta<-ncpPrevFit_startup$beta$logbeta[[1]]
+word_prob<-exp(logbeta)
+word_attribute<-sapply(1:dim(word_prob)[2], function(y) which(word_prob[,y]==max(word_prob[,y])))
+#print(out$vocab)
+word_prob_sorted<-word_prob[,order(freq_vocab,decreasing = TRUE)]
+word_attribute_sorted<-word_attribute[order(freq_vocab,decreasing = TRUE)]
+aa<-data.frame(vocab_app,sort(freq_vocab,decreasing = TRUE),t(word_prob_sorted),word_attribute_sorted)
+write.csv(aa, "vocabulary_sept2023.csv")
+
+####
+# Analysis on chosen model run 
+# Table 1: most frequent and exclusive terms (FREX): 
+#label<-labelTopics(ncpPrevFit_ecogrowth, topics=NULL, n=10)
+labelTopics(ncpPrevFit_startup, topics=Korder, n=20)
+# 
+# ncpPrevFit_startup$theta[which(out$meta$Titles=="A system dynamics based market agent model simulating future powertrain technology transition: Scenarios in the EU light duty vehicle road transport sector"),]
+# 
+# which(ncpPrevFit_startup$theta[,24]>.25 & ncpPrevFit_startup$theta[,25]>.25)
+# out$meta$Titles[c(894)]
+
+data_lemmatized<-cbind(data_lemmatized,ncpPrevFit_startup$theta[,Korder])
+#write.csv(data_lemmatized,'data_degrowth_sept2023.csv', col.names=T)
+
+```
+
+# ```{r, echo=FALSE}
+# country_matrix<-matrix(0, Kchoice,length(unique(data_lemmatized$Country)))
+# country_matrix<-as.data.frame(country_matrix)
+# colnames(country_matrix)<-unique(data_lemmatized$Country)
+# sums_topics<-matrix(0, 1, length(unique(data_lemmatized$Country)))
+# for (c_i in unique(data_lemmatized$Country)){
+#   sums_topics[which(colnames(country_matrix)==c_i)]<-sum(ncpPrevFit_startup$theta[which(out$meta$Country==c_i),])
+# }
+# 
+# for (i in 1:Kchoice){
+#   
+#   for (c_i in unique(data_lemmatized$Country)){
+#   
+# country_matrix[i,which(colnames(country_matrix)==c_i)]<-sum(ncpPrevFit_startup$theta[which(out$meta$Country==c_i),i])/sums_topics[which(colnames(country_matrix)==c_i)]
+# 
+# #colSums(ncpPrevFit_startup$theta)/sum(ncpPrevFit_startup$theta)
+# 
+#     }
+# }
+# colSums(country_matrix)
+# 
+# library("corrplot")
+# rownames(country_matrix)<-tiopiclabel#[c(3,8,4,1,6,2,5,7)]
+# par(mfrow = c(1, 1) ,mar=c(1,2,1,1))
+# 
+# end_point = 0.5 + nrow(mtcars) + nrow(mtcars) - 1 #this is the line which does the trick (together with barplot "space = 1" parameter)
+# 
+# corrplot(as.matrix(country_matrix[Korder,]), is.corr = FALSE, method = "square",tl.cex=1.2,tl.col = "black",cl.lim = c(0, 1),col=colorRampPalette(c("yellow",'orange',"red"))(200))
+# 
+# 
+# 
+# ```
+
+
+
+```{r, echo=FALSE}
+
+# for (topic_i in 1){
+#   for (thought_i in 1:20){escription
+#     c<-vocab[docs[findThoughts(ncpPrevFit_climpolicy, texts=meta$Text.CarbonTaxPolicy, n=20,topics=topic_i)$index[[1]]][[thought_i]][1,]]
+#     print(c)
+#   }
+# }
+
+
+# Table 2: responses that are highly associated with topics
+nk<-10
+for (ci in Korder){
+  cii<-ci+1
+  thoughts1<-findThoughts(ncpPrevFit_startup, texts=out$meta$Title, n=nk, topics=ci)$docs[[1]]
+  # thoughts2<-findThoughts(ncpPrevFit_startup, texts=out$meta$Author_Keywords, n=nk, topics=ci)$docs[[1]]
+  # thoughts3<-findThoughts(ncpPrevFit_startup, texts=out$meta$Indexed_Keywords, n=nk, topics=ci)$docs[[1]]
+  topic_proportions<-as.matrix(make.dt(ncpPrevFit_startup))[findThoughts(ncpPrevFit_startup, texts=out$meta$Titles, n=nk,topics=ci)$index[[1]],cii]
+  
+  message("5 illustrative titles with high prevalence together with the values of those prevalences of Topic :")
+  print(tiopiclabel[ci])
+  print(thoughts1[1:nk])
+    # print(thoughts2[1:nk])
+    #   print(thoughts3[1:nk])
+
+   print(topic_proportions)
+}
+```
+
+
+
+
+```{r, echo=FALSE}
+logbeta<-ncpPrevFit_startup$beta$logbeta[[1]]
+word_prob<-exp(logbeta)
+word_attribute<-sapply(1:dim(word_prob)[2], function(y) which(word_prob[,y]==max(word_prob[,y])))
+#print(out$vocab)
+ 
+
+
+logbeta <- ncpPrevFit_startup$beta$logbeta[[1]]
+wordcounts <- ncpPrevFit_startup$dim$wcounts$x
+frexlabels <-calcfrex(logbeta, 0, wordcounts)
+problabels<-apply(logbeta, 1, order, decreasing=TRUE)
+# set.seed(1234)
+# wordcloud(words = out$vocab, freq = problabels[,1],scale=c(3,.1), min.freq = 0,
+#           max.words=20, random.order=FALSE, rot.per=0.5,
+#           colors=frexlabels[,1]) 
+# shadesOfGrey <- colorRampPalette(c("grey0", "grey100"))
+# fiftyGreys <- shadesOfGrey(length(out$vocab))
+nb.cols <- length(out$vocab)
+# threshold<-15
+# mycolors <- c(rep("#FFFFE5",length(out$vocab)-threshold),colorRampPalette(brewer.pal(8, "YlOrBr"))(threshold)) #heat.colors(10) rev(heat.colors(50))
+threshold<-700
+mycolors <- c(rep("#FFFFE5",length(out$vocab)-threshold),colorRampPalette(rev(heat.colors(100)))(threshold)) #heat.colors(10) rev(heat.colors(50))
+
+pal<-colorRampPalette(c("blue", "red"))
+mycolorsRB<-c(rep("darkblue",length(out$vocab)-threshold),pal(threshold))
+
+vec<-matrix(0,length(out$vocab),Kchoice)
+for (j in 1:Kchoice){
+  jj<-length(out$vocab)
+  for (i in 1:length(out$vocab)){
+    vec[frexlabels[i,j],j]<-jj
+    jj<-jj-1
+  }
+}
+
+add_vector<-colSums(ncpPrevFit_startup$theta)/sum(ncpPrevFit_startup$theta)*7#c(0,0,0,1)
+equal_vector<-matrix(mean(add_vector)*1,Kchoice,1)#c(0,0,0,1)
+
+#vector to normalize fonts between wordclouds
+# library("stm")
+# library("wordcloud")
+par(mfrow = c(3, 4) ,mar=c(1,2,1,1)) 
+set.seed(1)
+library("stm")
+for (ci in Korder){
+stm::cloud(ncpPrevFit_startup, topic = ci, max.words = 30,scale=c(5,.5)*equal_vector[ci],rot.per=0,random.order=FALSE)#,colors=fiftyGreys[frexlabels[,1]])
+title(tiopiclabel[ci])
+}
+
+# tiopiclabel_wc<-tiopiclabel
+# tiopiclabel_wc[3]<-"T1: Theory of socio- \n technical transitions" 
+# tiopiclabel_wc[8]<-"T2: Urban regimes \n and niches"
+# tiopiclabel_wc[4]<-"T3: Energy transition"
+# tiopiclabel_wc[1]<-"T4: Renewables and \n technology policy"
+# tiopiclabel_wc[6]<-"T5: Grassroots and \n local communities"
+# tiopiclabel_wc[2]<-"T6: Geography \n and diffusion \n of eco-innovations"
+# tiopiclabel_wc[5]<-"T7: Mobility and \n sharing economy" 
+# tiopiclabel_wc[7]<-"T8: Finance, investment \n and growth"
+
+par(mfrow = c(3, 4) ,mar=c(1,2,1,1))
+set.seed(1)
+for (ci in Korder){
+stm::cloud(ncpPrevFit_startup, topic = ci, max.words = 30,scale=c(5,.5)*equal_vector[ci],colors=mycolors[vec[,ci]],random.order=FALSE, random.color=FALSE, ordered.colors=TRUE,rot.per=0)
+title(tiopiclabel[ci], line = -.5)
+box("figure", col="black", lwd = 1)
+}
+
+
+# 
+# par(mfrow = c(7, 3) ,mar=c(1,2,1,1))
+# set.seed(1)
+# for (ci in 1:Kchoice){
+# cloud(ncpPrevFit_startup, topic = ci, max.words = 30,scale=c(3,.5)*equal_vector[ci]*1.8,colors=mycolorsRB[vec[,ci]],random.order=FALSE, random.color=FALSE, ordered.colors=TRUE,rot.per=0)
+# title(tiopiclabel[ci])
+# box("figure", col="black", lwd = 5)
+# }
+```
+
+Considering how prevalence of topics correlates with our covariates we see that:
+
+- while certain topics gain a lot in populariy, others lose a lot
+
+At the end I print the regression model of eact topic explained by time to show the size and significance of those slopes (ONLY SIGNIFICANT SLOPES ARE PLOTTED!)
+
+```{r, echo=FALSE}
+library(RColorBrewer)
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+set.seed(20)
+col=sample(col_vector, Kchoice)
+
+par(mfrow = c(1, 1))
+
+# Figure 1: Topical prevalence over co-variates
+
+#if(justloaddata==0){
+out$meta$citationspy<-as.numeric(out$meta$citationspy)
+
+  prep <- estimateEffect(Korder ~ Year + citationspy + Theoretical.Model + Empirical.Model + Qualitative.Data + Quantitative.Data,
+                        ncpPrevFit_startup,
+                       meta=out$meta,
+                       uncertainty = "Global")
+
+#  save(prep, file = "prep_eist_10.RData")
+#}
+#load("prep__eist_10.RData")
+
+
+par(mfrow = c(3, 4) ,mar=c(2,2,2,2))
+
+for(k_i in Korder){
+plot.estimateEffect(prep,
+                    main="",
+                    covariate = "Year",
+                    topics = c(k_i),
+                    model=ncpPrevFit_startup,
+                    method="continuous",
+                    labeltype="custom",
+                    custom.labels=tiopiclabel[k_i],
+                    ylim=c(0,.5),
+                    linecol="black",
+                    ylab="Expected topic prevalence",ci.level=0.95
+)
+
+}
+
+par(mfrow = c(1, 1) ,mar=c(2,2,1,1))
+plot.estimateEffect(prep,
+                    main="",
+                    covariate = "Year",
+                    topics = 1:Kchoice,
+                    model=ncpPrevFit_startup,
+                    method="continuous",
+                    labeltype="custom",
+                    custom.labels=tiopiclabel[Korder],
+                    ylim=c(0,.5),
+                    linecol=col[Korder],
+                    ylab="Expected topic prevalence",ci.level=0.01
+)
+par(mfrow = c(3, 4) ,mar=c(2,2,2,2))
+
+for(k_i in Korder){
+plot.estimateEffect(prep,
+                    main="",
+                    covariate = "citationspy",
+                    topics = c(k_i),
+                    model=ncpPrevFit_startup,
+                    method="continuous",
+                    labeltype="custom",
+                    custom.labels=tiopiclabel[k_i],
+                    ylim=c(0,.3),
+                    linecol="black",
+                    ylab="Expected topic prevalence",ci.level=0.95
+)
+}
+par(mfrow = c(1, 1) ,mar=c(2,2,1,1))
+
+plot.estimateEffect(prep,
+                    main="",
+                    covariate = "citationspy",
+                    topics = 1:Kchoice,
+                    model=ncpPrevFit_startup,
+                    method="continuous",
+                    labeltype="custom",
+                    custom.labels=tiopiclabel[Korder],
+                    ylim=c(0,.3),
+                    linecol=col[Korder],
+                    ylab="Expected topic prevalence",ci.level=0.01)
+#summary(prep)
+
+par(mfrow = c(2, 2) ,mar=c(2,4,2,2))
+plot.estimateEffect(prep,
+                    main="Theoretical model",
+                    covariate = "Theoretical.Model",
+                    topics = Korder,
+                    model=ncpPrevFit_startup,
+                    method="difference",
+                    labeltype="custom",
+                    custom.labels=tiopiclabel[Korder],
+                    cov.value1 = 1,cov.value2 = 0,
+                    xlim=c(-1,1),
+                    linecol=col[Korder],
+                    xlab="",ci.level=0.95
+)
+
+plot.estimateEffect(prep,
+                    main="Empirical model",
+                    covariate = "Empirical.Model",
+                    topics = Korder,
+                    model=ncpPrevFit_startup,
+                    method="difference",
+                    labeltype="custom",
+                    custom.labels=tiopiclabel[Korder],
+                    cov.value1 = 1,cov.value2 = 0,
+                    xlim=c(-1,1),
+                    linecol=col[Korder],
+                    xlab="",ci.level=0.95
+)
+plot.estimateEffect(prep,
+                    main="Qualitative data",
+                    covariate = "Qualitative.Data",
+                    topics = Korder,
+                    model=ncpPrevFit_startup,
+                    method="difference",
+                    labeltype="custom",
+                    custom.labels=tiopiclabel[Korder],
+                    cov.value1 = 1,cov.value2 = 0,
+                    xlim=c(-1,1),
+                    linecol=col[Korder],
+                    xlab="",ci.level=0.95
+)
+
+plot.estimateEffect(prep,
+                    main="Quantitative data",
+                    covariate = "Quantitative.Data",
+                    topics = Korder,
+                    model=ncpPrevFit_startup,
+                    method="difference",
+                    labeltype="custom",
+                    custom.labels=tiopiclabel[Korder],
+                    cov.value1 = 1,cov.value2 = 0,
+                    xlim=c(-1,1),
+                    linecol=col[Korder],
+                    xlab="",ci.level=0.95
+)
+
+prep2 <- estimateEffect(Korder ~  Year + citationspy + Theoretical.Model + Empirical.Model + Qualitative.Data + Quantitative.Data,
+                       ncpPrevFit_startup,
+                       meta=out$meta,
+                       uncertainty = "Global")
+summary(prep2)
+
+
+# t(ncpPrevFit_startup$theta) %*% data_lemmatized$citations
+# par(mfrow = c(1, 1) ,mar=c(2,2,1,1))
+# 
+# slices <- t(ncpPrevFit_startup$theta) %*% data_lemmatized$citations
+# lbls <- paste(tiopiclabel, "\n", round(slices) , sep="")
+# pie(slices[Korder], labels = lbls[Korder], main="")
+# 
+# shares<-colSums(ncpPrevFit_startup$theta)/sum(ncpPrevFit_startup$theta)
+# slices2<-(slices/(shares*100))/sum(slices/(shares*100))*sum(data_lemmatized$citations)/length(data_lemmatized$citations)*Kchoice
+# sum(slices2)
+# lbls <- paste(tiopiclabel, "\n", round(slices2) , sep="")
+# #pie(slices2, labels = lbls, main="")
+# par(mfrow = c(1, 1) ,mar=c(5,20,1,4))
+# barplot(rev(t(slices2)[Korder]), names.arg = rev(lbls[Korder]), main="",horiz=TRUE,las=2,cex.names=0.9,)
+# 
+
+
+
+
+t(ncpPrevFit_startup$theta) %*% data_lemmatized$citationspy
+par(mfrow = c(1, 1) ,mar=c(2,2,1,1))
+
+slices <- t(ncpPrevFit_startup$theta) %*% data_lemmatized$citationspy
+lbls <- paste(tiopiclabel, "\n", round(slices) , sep="")
+pie(slices[Korder], labels = lbls[Korder], main="")
+
+shares<-colSums(ncpPrevFit_startup$theta)/sum(ncpPrevFit_startup$theta)
+slices2<-(slices/(shares*100))/sum(slices/(shares*100))*sum(data_lemmatized$citationspy)/length(data_lemmatized$citationspy)*Kchoice
+sum(slices2)
+lbls <- tiopiclabel
+#pie(slices2, labels = lbls, main="")
+par(mfrow = c(1, 1) ,mar=c(5,20,1,4))
+barplot(rev(t(slices2)[Korder]), names.arg = rev(lbls[Korder]), main="",horiz=TRUE,las=2,cex.names=0.9,xlab = "Annual citations")
+
+
+# 
+# myData_response1<-matrix(0,8,5)
+# myData_response1<-as.data.frame(myData_response1)
+# colnames(myData_response1)<-c("Topic","mean","sd","n","se")
+# myData_response1$Topic<-seq(1,8)
+# myData_response1$mean<-sapply(1:8, function(x) mean(Response_per_Topic[,x]))
+# myData_response1$sd<-sapply(1:8, function(x) sd(Response_per_Topic[,x]))
+# myData_response1$n<-rep(length(out$meta$Text.CarbonTaxPolicy),8)
+# myData_response1$se<-myData_response1$sd/sqrt(myData_response1$n)
+```
+
+
+
+
+
+
+The next figure demonstrates co-occurrence of topics showing which pairs of topics tend to be mentioned within the same responses more (red) or less (blue) often.
+
+
+```{r, fig.width=12, fig.height=8}
+
+library(rworldmap)
+library(RColorBrewer)
+
+#data_lemmatized<-data_lemmatized[which(data_lemmatized$degrowth==1),]
+# Считаем появления каждой уникальной страны в уникальной статье
+cntr_list <- unlist(strsplit(as.character(data_lemmatized$uniq_countries), ', '))
+
+cntr_counts <- as.data.frame(table(as.data.frame(cntr_list)))
+cntr_counts <- rename(cntr_counts, country=cntr_list, value=Freq)
+
+# Маппинг стран
+sPDF <- joinCountryData2Map(cntr_counts, joinCode="NAME",
+                            nameJoinColumn="country", verbose=TRUE)
+# 
+# # График гео. распределения статей
+# mapCountryData(sPDF,
+#                nameColumnToPlot="value",
+#                colourPalette="heat",
+#                catMethod="pretty",
+#                mapTitle="Geographical coverage (basic)")
+
+defaultW <- getOption("warn")
+options(warn = -1)
+
+
+dF<-matrix(0,114,2)
+dF<-as.data.frame(dF)
+names(dF)<-c("country", "value")
+dF<-cntr_counts
+dF$country<-as.character(dF$country)
+head(dF[order(dF$value, decreasing = TRUE),],n=20)
+
+suppressPackageStartupMessages(library(sf))
+world <- st_as_sf(rnaturalearth::countries110)
+#world <- world[world$name != 'Antarctica',]
+
+# A bounding box for continental Europe.
+#africa.bbox <- st_polygon(list(
+#  matrix(c(-25,79,75,29,45,-75,-25,-75,-25,79),byrow = T,ncol = 2)))
+
+world.clipped <- world
+#suppressWarnings(st_intersection(africa, st_sfc(africa.bbox, crs=st_crs(africa))))
+world.clipped<-world.clipped[order(world.clipped$SOVEREIGNT),]
+#world.clipped$sovereignt
+
+dF$country[which(dF$country=="United States")]<-"United States of America"
+dF$country[which(dF$country=="Russian Federation")]<-"Russia"
+
+library(dplyr)
+mydata_merged<-left_join(world.clipped,dF,by = c("SOVEREIGNT" = "country"))
+
+
+library(ggplot2)
+# attach(mtcars)
+# par(mfrow=c(2,2))
+plot_coins<-ggplot(mydata_merged, aes(fill=value)) +
+  geom_sf(alpha=0.8,col='white') +
+  #coord_sf(crs="+proj=aea +lat_1=+36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+  hrbrthemes::theme_ipsum_rc() +
+  viridis::scale_fill_viridis(
+    name='', direction = -1, labels=scales::number) +
+  labs(x=NULL, y=NULL, title='Geographical coverage (basic)')
+plot_coins
+
+
+europe <- world[world$REGION_UN=="Europe"&world$NAME!='Russia'&world$NAME!='Ukraine',]
+# plot(europe)
+
+# A bounding box for continental Europe.
+europe.bbox <- st_polygon(list(
+  matrix(c(-25,29,45,29,45,75,-25,75,-25,29),byrow = T,ncol = 2)))
+
+# Get polygons that are only in continental Europe.
+europe.clipped <-suppressWarnings(st_intersection(europe, st_sfc(europe.bbox, crs=st_crs(europe))))
+europe_merged<-left_join(europe.clipped,dF,by = c("SOVEREIGNT" = "country"))
+
+
+
+plot_europe<-ggplot(europe_merged, aes(fill=value)) +
+  geom_sf(alpha=0.8,col='white') +
+  #coord_sf(crs="+proj=aea +lat_1=+36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+  hrbrthemes::theme_ipsum_rc() +
+  viridis::scale_fill_viridis(
+    name='', direction = -1, labels=scales::number) +
+  labs(x=NULL, y=NULL, title='Europe')
+plot_europe
+library(ggpubr)
+# ggarrange(plot_coins, plot_europe,
+#           # labels = c("A", "B"),
+#           ncol = 2, nrow = 1)
+
+
+
+library(stringr)
+n_countries<-sapply(1:length(data_lemmatized$uniq_countries), function(x) ifelse(data_lemmatized$uniq_countries[x]!="",1+str_count(data_lemmatized$uniq_countries[x],","),0))
+l_countriesl<-list()
+l_citation<-list()
+for (i in 1:length(n_countries)){
+  l_countriesl<-append(l_countriesl,rep(n_countries[i],n_countries[i]))
+  l_citation<-list(l_citation,rep(data_lemmatized$citationspy[i],n_countries[i]))
+}
+l_countries<-unlist(l_countriesl)
+l_citation<-unlist(l_citation)
+
+
+
+cntr_list <- unlist(strsplit(as.character(data_lemmatized$uniq_countries), ', '))
+cntr_list<-cbind(cntr_list,1/l_countries,1/l_countries*l_citation)
+cntr_list<- as.data.frame(cntr_list)
+
+colnames(cntr_list)<-c("Class","FrequencyFraq","FrequencyCit")
+cntr_list[,2]<-as.numeric(cntr_list[,2])
+cntr_list[,3]<-as.numeric(cntr_list[,3])
+
+cntr_counts2<-aggregate(cntr_list["FrequencyFraq"],by=cntr_list["Class"],sum)
+cntr_counts3<-aggregate(cntr_list["FrequencyCit"],by=cntr_list["Class"],sum)
+
+
+# Маппинг стран
+sPDF <- joinCountryData2Map(cntr_counts2, joinCode="NAME",
+                            nameJoinColumn="Class", verbose=TRUE)
+# 
+# # График гео. распределения статей
+# mapCountryData(sPDF,
+#                nameColumnToPlot="FrequencyFraq",
+#                colourPalette="heat",
+#                catMethod="pretty",
+#                mapTitle="Geographical coverage (fraction)")
+
+dF<-cntr_counts2
+colnames(dF)<-c("country","value")
+dF$country<-as.character(dF$country)
+head(dF[order(dF$value, decreasing = TRUE),],n=20)
+
+suppressPackageStartupMessages(library(sf))
+world <- st_as_sf(rnaturalearth::countries110)
+world <- world[world$NAME != 'Antarctica',]
+
+# A bounding box for continental Europe.
+#africa.bbox <- st_polygon(list(
+#  matrix(c(-25,79,75,29,45,-75,-25,-75,-25,79),byrow = T,ncol = 2)))
+
+world.clipped <- world
+#suppressWarnings(st_intersection(africa, st_sfc(africa.bbox, crs=st_crs(africa))))
+world.clipped<-world.clipped[order(world.clipped$SOVEREIGNT),]
+#world.clipped$SOVEREIGNT
+dF$country[which(dF$country=="United States")]<-"United States of America"
+dF$country[which(dF$country=="Russian Federation")]<-"Russia"
+
+library(dplyr)
+mydata_merged<-left_join(world.clipped,dF,by = c("SOVEREIGNT" = "country"))
+
+
+library(ggplot2)
+# attach(mtcars)
+# par(mfrow=c(2,2))
+plot_coins<-ggplot(mydata_merged, aes(fill=value)) +
+  geom_sf(alpha=0.8,col='white') +
+  #coord_sf(crs="+proj=aea +lat_1=+36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+  hrbrthemes::theme_ipsum_rc() +
+  viridis::scale_fill_viridis(
+    name='', direction = -1, labels=scales::number) +
+  labs(x=NULL, y=NULL, title='Geographical coverage (fraction)')
+plot_coins
+
+
+europe <- world[world$REGION_UN=="Europe"&world$NAME!='Russia'&world$NAME!='Ukraine',]
+# plot(europe)
+
+# A bounding box for continental Europe.
+europe.bbox <- st_polygon(list(
+  matrix(c(-25,29,45,29,45,75,-25,75,-25,29),byrow = T,ncol = 2)))
+
+# Get polygons that are only in continental Europe.
+europe.clipped <-suppressWarnings(st_intersection(europe, st_sfc(europe.bbox, crs=st_crs(europe))))
+europe_merged<-left_join(europe.clipped,dF,by = c("SOVEREIGNT" = "country"))
+
+
+
+plot_europe<-ggplot(europe_merged, aes(fill=value)) +
+  geom_sf(alpha=0.8,col='white') +
+  #coord_sf(crs="+proj=aea +lat_1=+36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+  hrbrthemes::theme_ipsum_rc() +
+  viridis::scale_fill_viridis(
+    name='', direction = -1, labels=scales::number) +
+  labs(x=NULL, y=NULL, title='Europe')
+plot_europe
+# library(ggpubr)
+# ggarrange(plot_coins, plot_europe,
+#           # labels = c("A", "B"),
+#           ncol = 2, nrow = 1)
+
+
+# Маппинг стран
+sPDF <- joinCountryData2Map(cntr_counts3, joinCode="NAME",
+                            nameJoinColumn="Class", verbose=TRUE)
+# 
+# # График гео. распределения статей
+# mapCountryData(sPDF,
+#                nameColumnToPlot="FrequencyCit",
+#                colourPalette="heat",
+#                catMethod="pretty",
+#                mapTitle="Geographical coverage (fraction & citation per year)")
+
+
+dF<-cntr_counts3
+colnames(dF)<-c("country","value")
+dF$country<-as.character(dF$country)
+head(dF[order(dF$value, decreasing = TRUE),],n=20)
+
+suppressPackageStartupMessages(library(sf))
+world <- st_as_sf(rnaturalearth::countries110)
+world <- world[world$NAME != 'Antarctica',]
+
+# A bounding box for continental Europe.
+#africa.bbox <- st_polygon(list(
+#  matrix(c(-25,79,75,29,45,-75,-25,-75,-25,79),byrow = T,ncol = 2)))
+
+world.clipped <- world
+#suppressWarnings(st_intersection(africa, st_sfc(africa.bbox, crs=st_crs(africa))))
+world.clipped<-world.clipped[order(world.clipped$SOVEREIGNT),]
+#world.clipped$SOVEREIGNT
+dF$country[which(dF$country=="United States")]<-"United States of America"
+dF$country[which(dF$country=="Russian Federation")]<-"Russia"
+
+library(dplyr)
+mydata_merged<-left_join(world.clipped,dF,by = c("SOVEREIGNT" = "country"))
+
+
+library(ggplot2)
+# attach(mtcars)
+# par(mfrow=c(2,2))
+plot_coins<-ggplot(mydata_merged, aes(fill=value)) +
+  geom_sf(alpha=0.8,col='white') +
+  #coord_sf(crs="+proj=aea +lat_1=+36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+  hrbrthemes::theme_ipsum_rc() +
+  viridis::scale_fill_viridis(
+    name='', direction = -1, labels=scales::number) +
+  labs(x=NULL, y=NULL, title='Geographical coverage (fraction & citation per year)')
+plot_coins
+
+
+europe <- world[world$REGION_UN=="Europe"&world$NAME!='Russia'&world$NAME!='Ukraine',]
+# plot(europe)
+
+# A bounding box for continental Europe.
+europe.bbox <- st_polygon(list(
+  matrix(c(-25,29,45,29,45,75,-25,75,-25,29),byrow = T,ncol = 2)))
+
+# Get polygons that are only in continental Europe.
+europe.clipped <-suppressWarnings(st_intersection(europe, st_sfc(europe.bbox, crs=st_crs(europe))))
+europe_merged<-left_join(europe.clipped,dF,by = c("SOVEREIGNT" = "country"))
+
+
+
+plot_europe<-ggplot(europe_merged, aes(fill=value)) +
+  geom_sf(alpha=0.8,col='white') +
+  #coord_sf(crs="+proj=aea +lat_1=+36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+  hrbrthemes::theme_ipsum_rc() +
+  viridis::scale_fill_viridis(
+    name='', direction = -1, labels=scales::number) +
+  labs(x=NULL, y=NULL, title='Europe')
+plot_europe
+# library(ggpubr)
+# ggarrange(plot_coins, plot_europe,
+#           # labels = c("A", "B"),
+#           ncol = 2, nrow = 1)
+
+
+country_weight<-matrix(0,Kchoice,5)
+country_weight<-as.data.frame(country_weight)
+
+
+
+colnames(country_weight)<-c("Spain","UK","Germany","US","Netherlands")
+for (k in 1:Kchoice){
+  
+country_weight[k,1]<-sum(ncpPrevFit_startup$theta[,k]*sapply(1:length(data_clean$Authors), function(x) ifelse(grepl("Spain", data_lemmatized$uniq_countries[x],fixed=TRUE),1,0)/max(1,n_countries[x])),na.rm = TRUE)
+
+
+
+country_weight[k,2]<-sum(ncpPrevFit_startup$theta[,k]*sapply(1:length(data_clean$Authors), function(x) ifelse(grepl("United Kingdom", data_lemmatized$uniq_countries[x],fixed=TRUE),1,0)/max(1,n_countries[x])),na.rm = TRUE)
+
+
+country_weight[k,3]<-sum(ncpPrevFit_startup$theta[,k]*sapply(1:length(data_clean$Authors), function(x) ifelse(grepl("Germany", data_lemmatized$uniq_countries[x],fixed=TRUE),1,0)/max(1,n_countries[x])),na.rm = TRUE)
+
+country_weight[k,4]<-sum(ncpPrevFit_startup$theta[,k]*sapply(1:length(data_clean$Authors), function(x) ifelse(grepl("United States", data_lemmatized$uniq_countries[x],fixed=TRUE),1,0)/max(1,n_countries[x])),na.rm = TRUE)
+
+country_weight[k,5]<-sum(ncpPrevFit_startup$theta[,k]*sapply(1:length(data_clean$Authors), function(x) ifelse(grepl("Netherlands", data_lemmatized$uniq_countries[x],fixed=TRUE),1,0)/max(1,n_countries[x])),na.rm = TRUE)
+}
+country_weight<-country_weight[Korder,]
+country_weight
+junk2<-colSums(country_weight)
+junk<-matrix(0,Kchoice,5)
+for (k in 1:5){
+junk[,k]<-country_weight[,k]/junk2[k]
+}
+rownames(junk)<-c(1:Kchoice)
+colnames(junk)<-c("Spain","UK","Germany","US","Netherlands")
+junk<-round(junk*100,digits=1)
+junk
+write.csv(junk,'country_weights_degrowth.csv', col.names=T)
+# 
+# europe <- world[world$region_un=="Europe"&world$name!='Russia'&world$name!='Ukraine',]
+# # plot(europe)
+# 
+# # A bounding box for continental Europe.
+# europe.bbox <- st_polygon(list(
+#   matrix(c(-25,29,45,29,45,75,-25,75,-25,29),byrow = T,ncol = 2)))
+# 
+# # Get polygons that are only in continental Europe.
+# europe.clipped <-suppressWarnings(st_intersection(europe, st_sfc(europe.bbox, crs=st_crs(europe))))
+# europe_merged<-left_join(europe.clipped,dF,by = c("SOVEREIGNT" = "country"))
+# 
+# 
+# 
+# plot_europe<-ggplot(europe_merged, aes(fill=value)) +
+#   geom_sf(alpha=0.8,col='white') +
+#   #coord_sf(crs="+proj=aea +lat_1=+36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+#   hrbrthemes::theme_ipsum_rc() +
+#   viridis::scale_fill_viridis(
+#     name='', direction = -1, labels=scales::number) +
+#   labs(x=NULL, y=NULL, title='Europe')
+# plot_europe
+# library(ggpubr)
+# ggarrange(plot_coins, plot_europe, 
+#           # labels = c("A", "B"),
+#           ncol = 2, nrow = 1)
+
+options(warn = defaultW)
+
+```
